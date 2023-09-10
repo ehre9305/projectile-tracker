@@ -172,14 +172,12 @@ while 1:
     coords = get_coords.get_coords_from_frame(filt_img)
 
     if coords != (-1, -1):
-        if points_started():
-            if not points_ended and coords[1] < max_y:
-                t_data
-            else:
-                points_ended = True
-        else:
-            if coords[1] < max_y:
-                points.append((t, *coords))
+        if not points_ended and coords[1] < max_y:
+            t_data.append(t)
+            x_data.append(coords[0])
+            y_data.append(coords[1])
+    elif points_started():
+        points_ended = True
 
     img = draw_ruler(img)
     img = draw_fps(img)
@@ -195,4 +193,4 @@ while 1:
 
 cv2.destroyAllWindows()
 
-plot(points, meters_per_pixel)
+plot(t_data, x_data, y_data, meters_per_pixel)
