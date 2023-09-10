@@ -24,12 +24,14 @@ def plot(time, x, y):
     quadratic_func = np.poly1d(quadratic_coeffs)
     quadratic_y = quadratic_func(regression_time)
     plt.plot(regression_time, quadratic_y, label="Quadratic Regression for y")
+    print(quadratic_coeffs)
 
     # Adding linear regression for x
     linear_coeffs = np.polyfit(time, x, 1)
     linear_func = np.poly1d(linear_coeffs)
     linear_x = linear_func(regression_time)
     plt.plot(regression_time, linear_x, label="Linear Regression for x")
+    print(linear_coeffs)
 
     # Adding quadratic regression for y
     quadratic_coeffs = np.polyfit(time[: int(len(x) / 1.7)], y[: int(len(x) / 1.7)], 2)
@@ -38,15 +40,17 @@ def plot(time, x, y):
     plt.plot(
         regression_time, quadratic_y, label="limited data Quadratic Regression for y"
     )
+    print(quadratic_coeffs)
 
     # Adding linear regression for x
     linear_coeffs = np.polyfit(time[: int(len(x) / 1.7)], x[: int(len(x) / 1.7)], 1)
     linear_func = np.poly1d(linear_coeffs)
     linear_x = linear_func(regression_time)
     plt.plot(regression_time, linear_x, label="limited data Linear Regression for x")
+    print(linear_coeffs)
 
     # Showing the legend
     plt.legend()
 
     # Displaying the plot
-    plt.show()
+    plt.draw()

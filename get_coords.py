@@ -24,14 +24,23 @@ def filter_frame(frame):
     return frame
 
 
-def get_coords_from_frame(frame):
+def get_contours(frame):
     contours, _ = cv.findContours(frame, cv.RETR_LIST, cv.CHAIN_APPROX_NONE)
+    return contours
+
+
+def get_biggest_contour(contours):
     if len(contours) == 0:
-        return (-1, -1)
-    biggest_contour = max(contours, key=cv.contourArea)
-    moments = cv.moments(biggest_contour)
+        return None
+    return max(contours, key=cv.contourArea)
+
+
+def get_contour_coords(contour):
+    if contour is None:
+        return None
+    moments = cv.moments(contour)
     if moments["m00"] == 0:
-        return (-1, -1)
+        return None
     cx = int(moments["m10"] / moments["m00"])
     cy = int(moments["m01"] / moments["m00"])
     return (cx, cy)

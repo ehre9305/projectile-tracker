@@ -5,10 +5,11 @@ import time
 import camera
 import get_coords
 from plot import plot
+from live_plot import LivePlot
 
 reference_points = []
-meters_per_pixel = 1  # no conversion by default, makes testing easier
-current_meters = 1.7  # kyle's wingspan
+meters_per_pixel = 0.0036956521739130435  # testing ratio in room, about 2m away
+current_meters = 1.715  # kyle's wingspan
 
 
 def inputNumber(message):
@@ -150,16 +151,8 @@ def points_started():
     return len(t_data) > 0
 
 
-while 1:
-    img, t = camera.get_frame()
-
-    # Create HSV Image and threshold into a range.
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    filt_img = filter(img)
-    img = cv2.bitwise_and(img, img, mask=filt_img)
-
-    max_y = cv2.getTrackbarPos("max y", "image")
-    img = cv2.line(
+def draw_threshold_line(frame):
+    return cv2.line(
         img,
         (0, max_y),
         (
@@ -169,27 +162,53 @@ while 1:
         (255, 0, 255),
     )
 
-    coords = get_coords.get_coords_from_frame(filt_img)
 
-    if coords != (-1, -1):
-        if not points_ended and coords[1] < max_y:
-            if initial_time == -1:
-                initial_time = t
-                t_data.append(0)
-            else:
-                t_data.append(t - initial_time)
-            x_data.append(coords[0] * meters_per_pixel)
-            y_data.append(coords[1] * meters_per_pixel)
-        elif points_started():
-            points_ended = True
+def handle_coords(coords):
+    global handle_coords, initial_time, points_ended
+    if not points_ended and coords[1] < max_y:
+        if initial_time == -1:
+            initial_time = t
+            t_data.append(0)
+        else:
+            t_data.append(t - initial_time)
+        x_data.append(coords[0] * meters_per_pixel)
+        y_data.append(coords[1] * meters_per_pixel)
+        live_plot.update(t_data, x_data, y_data)
+    elif points_started():
+        if not points_ended:
+            print(live_plot.xplot.get_data())
+            print(live_plot.yplot.get_ydata())
+        points_ended = True
+
+
+live_plot = LivePlot()
+
+while 1:
+    img, t = camera.get_frame()
+
+    # Create HSV Image and threshold into a range.
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    filt_img = filter(img)
+
+    max_y = cv2.getTrackbarPos("max y", "image")
+
+    contours = get_coords.get_contours(filt_img)
+    biggest_contour = get_coords.get_biggest_contour(contours)
+    coords = get_coords.get_contour_coords(biggest_contour)
+
+    TARGET_COLOR = (0, 255, 255)
+    img = cv2.drawContours(img, contours, -1, tuple(n * 0.8 for n in TARGET_COLOR))
+
+    if coords != None:
+        handle_coords(coords)
+        img = cv2.circle(img, coords, 5, TARGET_COLOR, 3)
+        img = cv2.drawContours(img, [biggest_contour], 0, TARGET_COLOR)
 
     img = draw_ruler(img)
     img = draw_fps(img)
+    img = draw_threshold_line(img)
 
-    cv2.imshow(
-        "image",
-        cv2.circle(img, coords, 20, (0, 255, 255), 3),
-    )
+    cv2.imshow("image", img)
 
     # Wait longer to prevent freeze for videos.
     if cv2.waitKey(waitTime) & 0xFF == ord("q"):
@@ -199,4 +218,5 @@ cv2.destroyAllWindows()
 
 # print(*zip(t_data, x_data, y_data), sep=",\n")
 
+camera.camera.release()
 plot(t_data, x_data, y_data)
