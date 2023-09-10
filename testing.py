@@ -7,6 +7,8 @@ import get_coords
 from plot import plot
 from live_plot import LivePlot
 
+PRINT_FPS = True
+
 reference_points = []
 meters_per_pixel = 0.0036956521739130435  # testing ratio in room, about 2m away
 current_meters = 1.715  # kyle's wingspan
@@ -75,9 +77,13 @@ def draw_fps(frame):
     FPS_COLOR = (0, 255, 0)
     FPS_LOCATION = (0, 40)
     current_time = time.time()
+
+    fps = round(1 / (current_time - last_time), 1)
+    if PRINT_FPS:
+        print(fps)
     frame = cv2.putText(
         frame,
-        str(round(1 / (current_time - last_time), 1)) + "fps",
+        str(fps) + "fps",
         FPS_LOCATION,
         cv2.FONT_HERSHEY_SIMPLEX,
         1,
@@ -111,13 +117,29 @@ def createWindowAndTrackbars():
         nothing,
     )
 
-    # Set default value for MAX HSV trackbars.
-    cv2.setTrackbarPos("HMin", "image", 160)
-    cv2.setTrackbarPos("SMin", "image", 100)
-    cv2.setTrackbarPos("VMin", "image", 50)
-    cv2.setTrackbarPos("HMax", "image", 179)
-    cv2.setTrackbarPos("SMax", "image", 255)
-    cv2.setTrackbarPos("VMax", "image", 255)
+    # green
+    setup = "green"
+    if setup == "green":
+        cv2.setTrackbarPos("HMin", "image", 13)
+        cv2.setTrackbarPos("SMin", "image", 40)
+        cv2.setTrackbarPos("VMin", "image", 96)
+        cv2.setTrackbarPos("HMax", "image", 42)
+        cv2.setTrackbarPos("SMax", "image", 255)
+        cv2.setTrackbarPos("VMax", "image", 255)
+    elif setup == "red":
+        cv2.setTrackbarPos("HMin", "image", 160)
+        cv2.setTrackbarPos("SMin", "image", 100)
+        cv2.setTrackbarPos("VMin", "image", 140)
+        cv2.setTrackbarPos("HMax", "image", 179)
+        cv2.setTrackbarPos("SMax", "image", 255)
+        cv2.setTrackbarPos("VMax", "image", 255)
+    else:
+        cv2.setTrackbarPos("HMin", "image", 0)
+        cv2.setTrackbarPos("SMin", "image", 0)
+        cv2.setTrackbarPos("VMin", "image", 0)
+        cv2.setTrackbarPos("HMax", "image", 179)
+        cv2.setTrackbarPos("SMax", "image", 255)
+        cv2.setTrackbarPos("VMax", "image", 255)
 
 
 createWindowAndTrackbars()
@@ -163,8 +185,8 @@ def draw_threshold_line(frame):
     )
 
 
-def handle_coords(coords):
-    global handle_coords, initial_time, points_ended
+def handle_coords(coords, t):
+    global initial_time, points_ended
     if not points_ended and coords[1] < max_y:
         if initial_time == -1:
             initial_time = t
@@ -200,7 +222,7 @@ while 1:
     img = cv2.drawContours(img, contours, -1, tuple(n * 0.8 for n in TARGET_COLOR))
 
     if coords != None:
-        handle_coords(coords)
+        handle_coords(coords, t)
         img = cv2.circle(img, coords, 5, TARGET_COLOR, 3)
         img = cv2.drawContours(img, [biggest_contour], 0, TARGET_COLOR)
 
@@ -210,6 +232,8 @@ while 1:
 
     cv2.imshow("image", img)
 
+    if PRINT_FPS:
+        print("total work time" + str(time.time() - t))
     # Wait longer to prevent freeze for videos.
     if cv2.waitKey(waitTime) & 0xFF == ord("q"):
         break
