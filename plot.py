@@ -2,14 +2,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot(time, x, y, meters_per_pixel):
+def plot(time, x, y):
     # Extracting x and y coordinates from the data
-    time = np.array(time) - time[0]
-    y = np.array(y) * meters_per_pixel
-    x = np.array(x) * meters_per_pixel
-    # time = [point[0] for point in points]
-    # x = [point[1] for point in points]
-    # y = [point[2] for point in points]
+    time = np.array(time)
+    y = np.array(y)
+    x = np.array(x)
 
     # Creating the scatter plot
     plt.scatter(time, x, label="x")

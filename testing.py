@@ -7,7 +7,7 @@ import get_coords
 from plot import plot
 
 reference_points = []
-meters_per_pixel = 0
+meters_per_pixel = 1  # no conversion by default, makes testing easier
 current_meters = 1.7  # kyle's wingspan
 
 
@@ -140,6 +140,7 @@ def filter(frame):
 waitTime = 1
 
 # points shape (t, x, y)
+initial_time = -1
 t_data, y_data, x_data = [], [], []
 
 points_ended = False
@@ -150,8 +151,7 @@ def points_started():
 
 
 while 1:
-    img = camera.get_frame()
-    t = time.time()
+    img, t = camera.get_frame()
 
     # Create HSV Image and threshold into a range.
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -173,11 +173,15 @@ while 1:
 
     if coords != (-1, -1):
         if not points_ended and coords[1] < max_y:
-            t_data.append(t)
-            x_data.append(coords[0])
-            y_data.append(coords[1])
-    elif points_started():
-        points_ended = True
+            if initial_time == -1:
+                initial_time = t
+                t_data.append(0)
+            else:
+                t_data.append(t - initial_time)
+            x_data.append(coords[0] * meters_per_pixel)
+            y_data.append(coords[1] * meters_per_pixel)
+        elif points_started():
+            points_ended = True
 
     img = draw_ruler(img)
     img = draw_fps(img)
@@ -193,4 +197,6 @@ while 1:
 
 cv2.destroyAllWindows()
 
-plot(t_data, x_data, y_data, meters_per_pixel)
+# print(*zip(t_data, x_data, y_data), sep=",\n")
+
+plot(t_data, x_data, y_data)
