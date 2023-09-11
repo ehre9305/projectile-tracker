@@ -5,4 +5,4 @@ camera = cv.VideoCapture(0)
 
 
 def get_frame():
-    return camera.read()[1], time.time()
+    return camera.read()[1], camera.get(cv.CAP_PROP_POS_MSEC) / 1000

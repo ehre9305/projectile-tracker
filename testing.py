@@ -2,7 +2,7 @@
 import cv2
 import math
 import time
-import double_camera as camera
+import camera
 import get_coords
 from live_plot import LivePlot
 
@@ -71,14 +71,14 @@ def draw_ruler(frame):
 last_time = time.time()
 
 
-def draw_fps(frame):
+def draw_fps(frame, t):
     global last_time
     FPS_COLOR = (0, 255, 0)
     FPS_LOCATION = (0, 40)
-    current_time = time.time()
+    current_time = t
 
     fps = round(1 / (current_time - last_time), 1)
-    if PRINT_FPS:
+    if PRINT_FPS and not points_ended:
         print(fps)
     frame = cv2.putText(
         frame,
@@ -117,7 +117,7 @@ def createWindowAndTrackbars():
     )
 
     # green
-    setup = "green"
+    setup = "red"
     if setup == "green":
         cv2.setTrackbarPos("HMin", "image", 13)
         cv2.setTrackbarPos("SMin", "image", 40)
@@ -188,25 +188,26 @@ def handle_coords(coords, t):
     global initial_time, points_ended
     if not points_ended and coords[1] < max_y:
         if initial_time == -1:
+            print("starting")
             initial_time = t
             t_data.append(0)
-            live_plot.start(t_data, x_data, y_data)
         else:
             t_data.append(t - initial_time)
         x_data.append(coords[0] * meters_per_pixel)
         y_data.append(coords[1] * meters_per_pixel)
-        print(t_data, x_data, y_data)
-        live_plot.update()
+        if len(t_data) > 1:
+            live_plot.update()
     elif points_started():
         if not points_ended:
-            print(live_plot.xplot.get_data())
-            print(live_plot.yplot.get_ydata())
+            print(live_plot.xplot.getData())
+            print(live_plot.yplot.getData()[1])
         points_ended = True
 
 
-live_plot = LivePlot()
+live_plot = LivePlot(t_data, x_data, y_data)
 
 while 1:
+    before_frame_time = time.time()
     img, t = camera.get_frame()
 
     # Create HSV Image and threshold into a range.
@@ -228,13 +229,13 @@ while 1:
         img = cv2.drawContours(img, [biggest_contour], 0, TARGET_COLOR)
 
     img = draw_ruler(img)
-    img = draw_fps(img)
+    img = draw_fps(img, t)
     img = draw_threshold_line(img)
 
     cv2.imshow("image", img)
 
-    if PRINT_FPS:
-        print("total work time" + str(time.time() - t))
+    if PRINT_FPS and not points_ended:
+        print("total work time" + str(time.time() - before_frame_time))
     # Wait longer to prevent freeze for videos.
     if cv2.waitKey(waitTime) & 0xFF == ord("q"):
         break
