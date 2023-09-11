@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+# import pyqtgraph as pg
+
 
 def time_to_y_pos(t, vi, pi):
     g = 9.8
@@ -9,8 +11,9 @@ def time_to_y_pos(t, vi, pi):
 
 class LivePlot:
     def __init__(self):
+        # self.plog = pg.plot(name="position")
         plt.ion()
-        _, self.ax = plt.subplots()
+        self.fig, self.ax = plt.subplots()
         plt.xlabel("Time (s)")
         plt.ylabel("Position (m)")
         plt.title("Time vs Position")
@@ -19,21 +22,27 @@ class LivePlot:
         (self.yplot,) = self.ax.plot([], [], "ro", label="y")
         (self.yprediction,) = self.ax.plot([], [], "m", label="y prediction")
         plt.legend()
-        plt.show()
 
-    def update(self, t, x, y):
-        self.xplot.set_data(t, x)
-        self.yplot.set_data(t, y)
+    def start(self, t, x, y):
+        self.t = t
+        self.x = x
+        self.y = y
 
-        if len(t) > 2:
-            self.graph_lines(t, x, y)
+    def update(self):
+        self.xplot.set_data(self.t, self.x)
+        self.yplot.set_data(self.t, self.y)
+
+        if len(self.t) > 2:
+            self.graph_lines()
 
         self.__update_plot()
 
-    def graph_lines(self, t, x, y):
-        y_coeffs = np.polyfit(t, [y[i] - 4.9 * t[i] ** 2 for i in range(len(t))], 1)
+    def graph_lines(self):
+        y_coeffs = np.polyfit(
+            self.t, [self.y[i] - 4.9 * self.t[i] ** 2 for i in range(len(self.t))], 1
+        )
         print(y_coeffs)
-        x_coeffs = np.polyfit(t, x, 1)
+        x_coeffs = np.polyfit(self.t, self.x, 1)
         print(x_coeffs)
 
         y_func = np.poly1d([4.9] + list(y_coeffs))

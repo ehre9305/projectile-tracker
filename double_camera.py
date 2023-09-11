@@ -12,7 +12,7 @@ def get_frame():
         last_frame = camera.read()[1], time.time()
         return last_frame
     else:
-        print("double")
+        # print("double")
         out = last_frame
         time.sleep(max(0.016 - time.time() + last_frame[1], 0))
         last_frame = None

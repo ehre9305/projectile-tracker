@@ -2,9 +2,8 @@
 import cv2
 import math
 import time
-import camera
+import double_camera as camera
 import get_coords
-from plot import plot
 from live_plot import LivePlot
 
 PRINT_FPS = True
@@ -191,11 +190,13 @@ def handle_coords(coords, t):
         if initial_time == -1:
             initial_time = t
             t_data.append(0)
+            live_plot.start(t_data, x_data, y_data)
         else:
             t_data.append(t - initial_time)
         x_data.append(coords[0] * meters_per_pixel)
         y_data.append(coords[1] * meters_per_pixel)
-        live_plot.update(t_data, x_data, y_data)
+        print(t_data, x_data, y_data)
+        live_plot.update()
     elif points_started():
         if not points_ended:
             print(live_plot.xplot.get_data())
@@ -243,4 +244,3 @@ cv2.destroyAllWindows()
 # print(*zip(t_data, x_data, y_data), sep=",\n")
 
 camera.camera.release()
-plot(t_data, x_data, y_data)
