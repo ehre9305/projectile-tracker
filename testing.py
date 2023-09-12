@@ -4,7 +4,7 @@ import math
 import time
 import camera
 import get_coords
-from live_plot import LivePlot
+import write_data
 
 PRINT_FPS = True
 
@@ -117,7 +117,7 @@ def createWindowAndTrackbars():
     )
 
     # green
-    setup = "red"
+    setup = "green"
     if setup == "green":
         cv2.setTrackbarPos("HMin", "image", 13)
         cv2.setTrackbarPos("SMin", "image", 40)
@@ -195,20 +195,16 @@ def handle_coords(coords, t):
             t_data.append(t - initial_time)
         x_data.append(coords[0] * meters_per_pixel)
         y_data.append(coords[1] * meters_per_pixel)
-        if len(t_data) > 1:
-            live_plot.update()
+        write_data.write_points(t_data, x_data, y_data)
+        if len(t_data) > 2:
+            write_data.create_lines(t_data, x_data, y_data)
     elif points_started():
-        if not points_ended:
-            print(live_plot.xplot.getData())
-            print(live_plot.yplot.getData()[1])
         points_ended = True
 
 
-live_plot = LivePlot(t_data, x_data, y_data)
-
 while 1:
     before_frame_time = time.time()
-    img, t = camera.get_frame()
+    img, t = camera.get_frame_and_fps()
 
     # Create HSV Image and threshold into a range.
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)

@@ -1,6 +1,7 @@
 import numpy as np
-import pyqtgraph as pg
-import pyqtgraph.multiprocess as mp
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 
 def time_to_y_pos(t, vi, pi):
@@ -9,60 +10,57 @@ def time_to_y_pos(t, vi, pi):
 
 
 class LivePlot:
-    def __init__(self, t, x, y):
-        pg.mkQApp()
+    def __init__(self, points_filename, lines_filename):
+        fig, self.ax = plt.subplots()
 
-        proc = proc = mp.QtProcess()
-        rpg = proc._import("pyqtgraph")
-        self.plot = rpg.plot(name="position")
+        self.points_file = points_filename
+        self.lines_file = lines_filename
 
-        self.t = t
-        self.x = x
-        self.y = y
-
-        self.plot.setLabel(axis="bottom", text="Time (s)")
-        self.plot.setLabel(axis="left", text="Position (m)")
-        self.plot.setWindowTitle("Projectile Time vs Position")
-        self.legend = self.plot.addLegend()
-        self.xplot = self.plot.plot([], [], pen=None, symbolPen="b", name="x")
-        self.xprediction = self.plot.plot([], [], pen="c", name="x prediction")
-        self.yplot = self.plot.plot([], [], pen=None, symbolPen="r", name="y")
-        self.yprediction = self.plot.plot([], [], pen="m", name="y prediction")
-        self.yprediction_no_g = self.plot.plot(
-            [], [], pen="y", name="y prediction without fixed gravity"
+        plt.xlabel("Time (s)")
+        plt.ylabel("Position (m)")
+        plt.title("Projectile Time vs Position")
+        self.ani = animation.FuncAnimation(
+            fig, self.update, interval=50, blit=False, save_count=10
         )
 
-    def update(self):
-        self.xplot.setData(self.t, self.x, _callSync="off")
-        self.yplot.setData(self.t, self.y, _callSync="off")
+    def plot_points(self):
+        points_df = pd.read_csv(self.points_file, header=None)
+        t = points_df.iloc[0]
+        x = points_df.iloc[1]
+        y = points_df.iloc[2]
 
-        # if len(self.t) > 2:
-        #     self.graph_lines(self.t, self.x, self.y)
+        self.max_t = max(t[len(t) - 1], 1)
 
-    def graph_lines(self, t, x, y):
-        y_coeffs_unfixed = np.polyfit(t, y, 2)
-        print(y_coeffs_unfixed)
-        y_coeffs = np.polyfit(t, [y[i] - 4.9 * t[i] ** 2 for i in range(len(t))], 1)
-        print(y_coeffs)
-        x_coeffs = np.polyfit(t, x, 1)
-        print(x_coeffs)
+        self.ax.clear()
+        (self.xplot,) = self.ax.plot(t, x, "bo", label="x")
+        (self.yplot,) = self.ax.plot(t, y, "ro", label="y")
 
-        y_func = np.poly1d([4.9] + list(y_coeffs))
-        y_func_unfixed = np.poly1d(y_coeffs_unfixed)
-        x_func = np.poly1d(x_coeffs)
+    def update(self, _):
+        self.plot_points()
+        self.graph_lines()
 
-        times_to_graph = np.linspace(0, 1, 50)
+        plt.legend()
+        return (self.xplot, self.yplot, self.ax)
 
-        y_to_graph = y_func(times_to_graph)
-        y_to_graph_unfixed = y_func_unfixed(times_to_graph)
-        x_to_graph = x_func(times_to_graph)
+    def graph_lines(self):
+        times_to_graph = np.linspace(0, self.max_t, 50)
 
-        self.yprediction.setData(times_to_graph, y_to_graph)
-        self.yprediction_no_g.setData(times_to_graph, y_to_graph_unfixed)
-        self.xprediction.setData(times_to_graph, x_to_graph)
+        lines_df = pd.read_csv(self.lines_file)
+
+        for line_name, line_coeffs in lines_df.items():
+            func = np.poly1d(list(line_coeffs))
+            y_to_graph = func(times_to_graph)
+
+            self.ax.plot(times_to_graph, y_to_graph, label=line_name)
 
     def graph_limited_lines(self, points):
         if points < 2:
             print("points must be 2 or higher")
             return
         self.graph_lines(self.t[:points], self.x[:points], self.y[:points])
+
+
+import write_data
+
+live_plot = LivePlot(write_data.POINTS_FILENAME, write_data.COEFFS_FILENAME)
+plt.show()
