@@ -6,7 +6,7 @@ import camera
 import get_coords
 import write_data
 
-PRINT_FPS = True
+PRINT_FPS = False
 
 reference_points = []
 meters_per_pixel = 0.0036956521739130435  # testing ratio in room, about 2m away
@@ -194,9 +194,9 @@ def handle_coords(coords, t):
         else:
             t_data.append(t - initial_time)
         x_data.append(coords[0] * meters_per_pixel)
-        y_data.append(coords[1] * meters_per_pixel)
+        y_data.append((max_y - coords[1]) * meters_per_pixel)
         write_data.write_points(t_data, x_data, y_data)
-        if len(t_data) > 2:
+        if len(t_data) > 1:
             write_data.create_lines(t_data, x_data, y_data)
     elif points_started():
         points_ended = True
