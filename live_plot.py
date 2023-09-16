@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from PyQt6.QtCore import QTimer
 import pyqtgraph as pg
 import sys
