@@ -40,10 +40,11 @@ def write_lines(lines):
 
 
 def create_limited_lines(t, x, y, points_to_count):
-    write_lines(
-        create_lines(
-            t[:points_to_count],
-            x[:points_to_count],
-            y[:points_to_count],
+    if points_to_count > 1:
+        write_lines(
+            create_lines(
+                t[:points_to_count],
+                x[:points_to_count],
+                y[:points_to_count],
+            )
         )
-    )

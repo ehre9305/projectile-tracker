@@ -10,7 +10,7 @@ import write_data
 PRINT_FPS = False
 
 
-USE_NETWORK_TABLES = True
+USE_NETWORK_TABLES = False
 
 if USE_NETWORK_TABLES:
     import ntcore

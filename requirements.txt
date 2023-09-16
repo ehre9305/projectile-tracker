@@ -1,0 +1,11 @@
+numpy==1.25.2
+opencv-python==4.8.0.76
+pandas==2.1.0
+PyQt6==6.5.2
+PyQt6-Qt6==6.5.2
+PyQt6-sip==13.5.2
+pyqtgraph==0.13.3
+python-dateutil==2.8.2
+pytz==2023.3.post1
+six==1.16.0
+tzdata==2023.3
