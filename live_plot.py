@@ -7,6 +7,8 @@ import os
 import numpy as np
 import pandas as pd
 
+import constants
+
 Q_COLORS = ["r", "g", "b", "c", "m", "y"]
 
 
@@ -57,7 +59,7 @@ class LivePlot:
         x = points_df.iloc[1]
         y = points_df.iloc[2]
 
-        self.max_t = max(t[len(t) - 1], 1)
+        self.max_t = t[len(t) - 1]
 
         self.xplot.setData(t, x)
         self.yplot.setData(t, y)
@@ -78,7 +80,11 @@ class LivePlot:
 
         lines_df = pd.read_csv(self.lines_file)
 
-        times_to_graph = np.linspace(0, self.max_t, 50)
+        times_to_graph = np.linspace(
+            0,
+            max(self.max_t, *np.poly1d(lines_df[constants.Y_FUNC_NAME]).roots),
+            50,
+        )
 
         for line_name in list(self.lines):
             if line_name not in lines_df.columns:
@@ -119,9 +125,7 @@ class LivePlot:
                 )
 
 
-import write_data
-
-live_plot = LivePlot(write_data.POINTS_FILENAME, write_data.COEFFS_FILENAME)
+live_plot = LivePlot(constants.POINTS_FILENAME, constants.COEFFS_FILENAME)
 
 timer = QTimer()
 timer.setInterval(30)

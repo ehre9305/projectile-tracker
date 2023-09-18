@@ -6,6 +6,8 @@ import time
 import camera
 import get_coords
 import write_data
+import analysis
+import constants
 
 PRINT_FPS = False
 
@@ -85,6 +87,38 @@ def draw_ruler(frame):
                 RULER_COLOR,
             )
 
+    for i in range(1, int(1 + frame.shape[0] * meters_per_pixel)):
+        frame = cv2.line(
+            frame,
+            (0, int((i - 0.5) / meters_per_pixel)),
+            (10, int((i - 0.5) / meters_per_pixel)),
+            RULER_COLOR,
+            2,
+        )
+        frame = cv2.line(
+            frame,
+            (0, int(i / meters_per_pixel)),
+            (20, int(i / meters_per_pixel)),
+            RULER_COLOR,
+            2,
+        )
+
+    for i in range(1, int(1 + frame.shape[1] * meters_per_pixel)):
+        frame = cv2.line(
+            frame,
+            (int((i - 0.5) / meters_per_pixel), frame.shape[0]),
+            (int((i - 0.5) / meters_per_pixel), frame.shape[0] - 10),
+            RULER_COLOR,
+            2,
+        )
+        frame = cv2.line(
+            frame,
+            (int(i / meters_per_pixel), frame.shape[0]),
+            (int(i / meters_per_pixel), frame.shape[0] - 20),
+            RULER_COLOR,
+            2,
+        )
+
     return frame
 
 
@@ -129,7 +163,14 @@ def createWindowAndTrackbars():
     cv2.createTrackbar("VMax", "image", 0, 255, nothing)
 
     cv2.createTrackbar(
-        "max y",
+        "start y",
+        "image",
+        0,
+        int(camera.camera.get(cv2.CAP_PROP_FRAME_HEIGHT)) - 1,
+        nothing,
+    )
+    cv2.createTrackbar(
+        "end y",
         "image",
         0,
         int(camera.camera.get(cv2.CAP_PROP_FRAME_HEIGHT)) - 1,
@@ -208,6 +249,7 @@ t_data, y_data, x_data = [], [], []
 lines = {}
 
 points_ended = False
+crossed_end_line = False
 
 
 def points_started():
@@ -215,29 +257,40 @@ def points_started():
 
 
 def draw_threshold_line(frame):
-    return cv2.line(
+    frame = cv2.line(
         img,
-        (0, max_y),
+        (0, start_y),
         (
             img.shape[1],
-            max_y,
+            start_y,
         ),
-        (255, 0, 255),
+        (0, 255, 0),
+        lineType=cv2.LINE_4,
     )
+    frame = cv2.line(
+        img,
+        (0, end_y),
+        (
+            img.shape[1],
+            end_y,
+        ),
+        (0, 0, 255),
+    )
+
+    return frame
 
 
 def draw_predicted_end(
     frame, y_line, x_line, zero_y_pixels, color, send_to_network_tables
 ):
-    y_func = np.poly1d(y_line)
-    x_func = np.poly1d(x_line)
-
-    end_time = max(y_func.roots)
-
-    end_x = x_func(end_time)
+    end_time = analysis.predict_last_time_to_cross(y_line, 0)
 
     if np.iscomplex(end_time):
         return frame
+
+    x_func = np.poly1d(x_line)
+
+    end_x = x_func(end_time)
 
     frame = cv2.circle(
         frame,
@@ -253,23 +306,45 @@ def draw_predicted_end(
     return frame
 
 
+# higher up is lower y val
 def handle_coords(coords, t):
-    global initial_time, points_ended, lines
-    if not points_ended and coords[1] < max_y:
-        if initial_time == -1:
-            print("starting")
-            initial_time = t
-            t_data.append(0)
-        else:
-            t_data.append(t - initial_time)
-        x_data.append(coords[0] * meters_per_pixel)
-        y_data.append((max_y - coords[1]) * meters_per_pixel)
-        write_data.write_points(t_data, x_data, y_data)
-        if len(t_data) > 1:
-            lines = write_data.create_lines(t_data, x_data, y_data)
-            write_data.write_lines(lines)
-    elif points_started():
+    global initial_time, points_ended, lines, crossed_end_line
+
+    current_y = coords[1]
+
+    def past_threshold(y_thresh, y_val=current_y):
+        return y_val < y_thresh
+
+    if points_ended or not (points_started() or past_threshold(start_y)):
+        return
+
+    def is_ended():
+        # start above end - only care if below end
+        if start_y <= end_y:
+            return not past_threshold(end_y)
+
+        # end above start - need to make sure we have crossed end line as well
+        return crossed_end_line and not past_threshold(end_y)
+
+    if is_ended():
         points_ended = True
+        return
+
+    if initial_time == -1:
+        print("starting")
+        initial_time = t
+        t_data.append(0)
+    else:
+        t_data.append(t - initial_time)
+    x_data.append(coords[0] * meters_per_pixel)
+    y_data.append((max(end_y, start_y) - current_y) * meters_per_pixel)
+    write_data.write_points(t_data, x_data, y_data)
+    if len(t_data) > 1:
+        lines = analysis.create_lines(t_data, x_data, y_data)
+        write_data.write_lines(lines)
+
+    if not crossed_end_line and past_threshold(end_y):
+        crossed_end_line = True
 
 
 while 1:
@@ -280,7 +355,9 @@ while 1:
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     filt_img = filter(img)
 
-    max_y = cv2.getTrackbarPos("max y", "image")
+    if not points_started() or points_ended:
+        start_y = cv2.getTrackbarPos("start y", "image")
+        end_y = cv2.getTrackbarPos("end y", "image")
 
     contours = get_coords.get_contours(filt_img)
     biggest_contour = get_coords.get_biggest_contour(contours)
@@ -296,17 +373,17 @@ while 1:
         if "y func" in lines:
             img = draw_predicted_end(
                 img,
-                lines[write_data.Y_FUNC_NO_GRAV_NAME],
-                lines[write_data.X_FUNC_NAME],
-                max_y,
+                lines[constants.Y_FUNC_NO_GRAV_NAME],
+                lines[constants.X_FUNC_NAME],
+                end_y,
                 (255, 128, 0),
                 False,
             )
             img = draw_predicted_end(
                 img,
-                lines[write_data.Y_FUNC_NAME],
-                lines[write_data.X_FUNC_NAME],
-                max_y,
+                lines[constants.Y_FUNC_NAME],
+                lines[constants.X_FUNC_NAME],
+                end_y,
                 (255, 0, 0),
                 USE_NETWORK_TABLES,
             )
