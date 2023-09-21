@@ -52,7 +52,10 @@ def get_initial_velocity(x_coeffs, y_coeffs):
 def predict_last_time_to_cross(coeffs, target):
     func = np.poly1d(coeffs)
 
-    func.coeffs -= target
+    func[0] -= target
+
+    if func.roots.size == 0:
+        return None
 
     return func.roots.max()
 
@@ -75,3 +78,23 @@ def get_camera_angle(t, x, y, deg=True):
         out = np.rad2deg(out)
 
     return out
+
+
+def get_scale_meters(y_line):
+    gravity = np.poly1d(y_line).deriv()[1]
+
+    return constants.GRAVITY / gravity
+
+
+def get_distance(meters_per_pixel):
+    frame_width_meters = constants.CAMERA_WIDTH * meters_per_pixel
+
+    distance = (frame_width_meters / 2) / np.tan(
+        np.deg2rad(constants.CAMERA_ANGLE_X / 2)
+    )
+
+    return distance
+
+
+def get_distance_from_line(y_line):
+    return get_distance(get_scale_meters(y_line))

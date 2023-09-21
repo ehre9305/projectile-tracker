@@ -30,8 +30,8 @@ if USE_NETWORK_TABLES:
 
 reference_points = []
 # meters_per_pixel = 0.012775759597626177
-meters_per_pixel = 0.0034856571617567344
-# meters_per_pixel = 0.0036956521739130435  # testing ratio in room, about 2m away
+# meters_per_pixel = 1
+meters_per_pixel = 0.0036956521739130435  # testing ratio in room, about 2m away
 current_meters = 1.715  # kyle's wingspan
 
 
@@ -177,8 +177,10 @@ def createWindowAndTrackbars():
         nothing,
     )
 
+    cv2.createTrackbar("active", "image", 0, 1, nothing)
+
     # green
-    setup = "pink"
+    setup = "green"
     if setup == "green":
         cv2.setTrackbarPos("HMin", "image", 13)
         cv2.setTrackbarPos("SMin", "image", 40)
@@ -247,6 +249,7 @@ waitTime = 1
 initial_time = -1
 t_data, y_data, x_data = [], [], []
 lines = {}
+line_mpx = -1
 
 points_ended = False
 crossed_end_line = False
@@ -285,7 +288,7 @@ def draw_predicted_end(
 ):
     end_time = analysis.predict_last_time_to_cross(y_line, 0)
 
-    if np.iscomplex(end_time):
+    if end_time is not None and np.iscomplex(end_time):
         return frame
 
     x_func = np.poly1d(x_line)
@@ -308,14 +311,18 @@ def draw_predicted_end(
 
 # higher up is lower y val
 def handle_coords(coords, t):
-    global initial_time, points_ended, lines, crossed_end_line
+    global initial_time, points_ended, lines, crossed_end_line, line_mpx
 
     current_y = coords[1]
 
     def past_threshold(y_thresh, y_val=current_y):
         return y_val < y_thresh
 
-    if points_ended or not (points_started() or past_threshold(start_y)):
+    if (
+        points_ended
+        or cv2.getTrackbarPos("active", "image") == 0
+        or not (points_started() or past_threshold(start_y))
+    ):
         return
 
     def is_ended():
@@ -327,6 +334,15 @@ def handle_coords(coords, t):
         return crossed_end_line and not past_threshold(end_y)
 
     if is_ended():
+        print(analysis.get_scale_meters(lines[constants.Y_FUNC_NO_GRAV_NAME]), "mpx")
+        dist = analysis.get_distance_from_line(
+            np.array(lines[constants.Y_FUNC_NO_GRAV_NAME]) / line_mpx
+        )
+        print(
+            dist,
+            "m away from obj",
+        )
+        print(dist * 39.37008, "in away from obj")
         points_ended = True
         return
 
@@ -337,10 +353,11 @@ def handle_coords(coords, t):
     else:
         t_data.append(t - initial_time)
     x_data.append(coords[0] * meters_per_pixel)
-    y_data.append((max(end_y, start_y) - current_y) * meters_per_pixel)
+    y_data.append((end_y - current_y) * meters_per_pixel)
     write_data.write_points(t_data, x_data, y_data)
     if len(t_data) > 1:
         lines = analysis.create_lines(t_data, x_data, y_data)
+        line_mpx = meters_per_pixel
         write_data.write_lines(lines)
 
     if not crossed_end_line and past_threshold(end_y):
@@ -397,8 +414,27 @@ while 1:
     if PRINT_FPS and not points_ended:
         print("total work time" + str(time.time() - before_frame_time))
     # Wait longer to prevent freeze for videos.
-    if cv2.waitKey(waitTime) & 0xFF == ord("q"):
+    key = cv2.waitKey(waitTime) & 0xFF
+    if key == ord("q"):
         break
+    elif key == ord("r"):
+        t_data, y_data, x_data = [], [], []
+        lines = {}
+        points_ended = False
+        cv2.setTrackbarPos("active", "image", 0)
+    elif key == ord("s") and points_ended == True:
+        meters_per_pixel = analysis.get_scale_meters(
+            np.array(lines[constants.Y_FUNC_NO_GRAV_NAME]) / line_mpx
+        )
+    elif key == ord(" ") and coords != None:
+        cv2.setTrackbarPos("end y", "image", coords[1])
+        cv2.setTrackbarPos(
+            "start y",
+            "image",
+            coords[1] - int(camera.camera.get(cv2.CAP_PROP_FRAME_HEIGHT) / 6),
+        )
+    elif key == ord("a"):
+        cv2.setTrackbarPos("active", "image", 1)
 
 cv2.destroyAllWindows()
 
