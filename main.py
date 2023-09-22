@@ -334,7 +334,10 @@ def handle_coords(coords, t):
         return crossed_end_line and not past_threshold(end_y)
 
     if is_ended():
-        print(analysis.get_scale_meters(lines[constants.Y_FUNC_NO_GRAV_NAME]), "mpx")
+        print(
+            analysis.get_scale_meters(lines[constants.Y_FUNC_NO_GRAV_NAME]) / line_mpx,
+            "mpx",
+        )
         dist = analysis.get_distance_from_line(
             np.array(lines[constants.Y_FUNC_NO_GRAV_NAME]) / line_mpx
         )
@@ -387,23 +390,23 @@ while 1:
         handle_coords(coords, t)
         img = cv2.circle(img, coords, 5, TARGET_COLOR, 3)
         img = cv2.drawContours(img, [biggest_contour], 0, TARGET_COLOR)
-        if "y func" in lines:
-            img = draw_predicted_end(
-                img,
-                lines[constants.Y_FUNC_NO_GRAV_NAME],
-                lines[constants.X_FUNC_NAME],
-                end_y,
-                (255, 128, 0),
-                False,
-            )
-            img = draw_predicted_end(
-                img,
-                lines[constants.Y_FUNC_NAME],
-                lines[constants.X_FUNC_NAME],
-                end_y,
-                (255, 0, 0),
-                USE_NETWORK_TABLES,
-            )
+    if "y func" in lines:
+        img = draw_predicted_end(
+            img,
+            lines[constants.Y_FUNC_NO_GRAV_NAME],
+            lines[constants.X_FUNC_NAME],
+            end_y,
+            (255, 128, 0),
+            False,
+        )
+        img = draw_predicted_end(
+            img,
+            lines[constants.Y_FUNC_NAME],
+            lines[constants.X_FUNC_NAME],
+            end_y,
+            (255, 0, 0),
+            USE_NETWORK_TABLES,
+        )
 
     img = draw_ruler(img)
     img = draw_fps(img, t)

@@ -72,7 +72,7 @@ def get_camera_angle(t, x, y, deg=True):
     print(x_func)
     print(x_accel)
 
-    out = np.arctan2(x_accel, y_accel)
+    out = np.arctan2(x_accel, -y_accel)
 
     if deg:
         out = np.rad2deg(out)
