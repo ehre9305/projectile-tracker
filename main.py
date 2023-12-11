@@ -180,7 +180,7 @@ def createWindowAndTrackbars():
     cv2.createTrackbar("active", "image", 0, 1, nothing)
 
     # green
-    setup = "green"
+    setup = "pink"
     if setup == "green":
         cv2.setTrackbarPos("HMin", "image", 13)
         cv2.setTrackbarPos("SMin", "image", 40)
@@ -206,7 +206,7 @@ def createWindowAndTrackbars():
         cv2.setTrackbarPos("HMin", "image", 150)
         cv2.setTrackbarPos("SMin", "image", 99)
         cv2.setTrackbarPos("VMin", "image", 97)
-        cv2.setTrackbarPos("HMax", "image", 171)
+        cv2.setTrackbarPos("HMax", "image", 179)
         cv2.setTrackbarPos("SMax", "image", 255)
         cv2.setTrackbarPos("VMax", "image", 255)
     elif setup == "red":
@@ -338,14 +338,15 @@ def handle_coords(coords, t):
             analysis.get_scale_meters(lines[constants.Y_FUNC_NO_GRAV_NAME]) / line_mpx,
             "mpx",
         )
-        dist = analysis.get_distance_from_line(
-            np.array(lines[constants.Y_FUNC_NO_GRAV_NAME]) / line_mpx
-        )
-        print(
-            dist,
-            "m away from obj",
-        )
-        print(dist * 39.37008, "in away from obj")
+        if constants.Y_FUNC_NO_GRAV_NAME in lines:
+            dist = analysis.get_distance_from_line(
+                np.array(lines[constants.Y_FUNC_NO_GRAV_NAME]) / line_mpx
+            )
+            print(
+                dist,
+                "m away from obj",
+            )
+            print(dist * 39.37008, "in away from obj")
         points_ended = True
         return
 
@@ -424,6 +425,7 @@ while 1:
         t_data, y_data, x_data = [], [], []
         lines = {}
         points_ended = False
+        initial_time = -1
         cv2.setTrackbarPos("active", "image", 0)
     elif key == ord("s") and points_ended == True:
         meters_per_pixel = analysis.get_scale_meters(
